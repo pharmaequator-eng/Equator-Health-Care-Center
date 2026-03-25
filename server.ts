@@ -40,7 +40,7 @@ app.post("/api/book", async (req, res) => {
         address, 
         contact, 
         email, 
-        age, 
+        age: parseInt(age, 10) || 0, 
         subject, 
         message, 
         booking_date: new Date().toISOString(),
@@ -49,12 +49,18 @@ app.post("/api/book", async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase insert error:", error);
+      if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+        throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
 
     res.json({ success: true, booking: data });
   } catch (error: any) {
-    console.error("Booking error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Booking catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred during booking." });
   }
 });
 
@@ -64,12 +70,19 @@ app.post("/api/contact", async (req, res) => {
     const { name, address, contact, email, age, subject, message } = req.body;
     const { data, error } = await supabase
       .from("contacts")
-      .insert([{ name, address, contact, email, age, subject, message }]);
+      .insert([{ name, address, contact, email, age: parseInt(age, 10) || 0, subject, message }]);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase insert error:", error);
+      if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+        throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Contact catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
   }
 });
 
@@ -89,10 +102,17 @@ app.get("/api/bookings", async (req, res) => {
       .from("bookings")
       .select("*")
       .order("booking_date", { ascending: false });
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase fetch error:", error);
+      if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+        throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Bookings fetch catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
   }
 });
 
@@ -104,10 +124,14 @@ app.patch("/api/booking/:id", async (req, res) => {
       .from("bookings")
       .update({ status })
       .eq("id", req.params.id);
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase update error:", error);
+      throw new Error(error.message || JSON.stringify(error));
+    }
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Booking update catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
   }
 });
 
@@ -118,10 +142,14 @@ app.delete("/api/booking/:id", async (req, res) => {
       .from("bookings")
       .delete()
       .eq("id", req.params.id);
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase delete error:", error);
+      throw new Error(error.message || JSON.stringify(error));
+    }
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Booking delete catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
   }
 });
 
@@ -132,10 +160,17 @@ app.get("/api/contacts", async (req, res) => {
       .from("contacts")
       .select("*")
       .order("id", { ascending: false });
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase fetch error:", error);
+      if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+        throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Contacts fetch catch error:", error.message || error);
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
   }
 });
 

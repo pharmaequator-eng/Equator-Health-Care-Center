@@ -717,16 +717,18 @@ const AdminDashboard = () => {
       const bData = await bookingsRes.json();
       const cData = await contactsRes.json();
       
-      if (Array.isArray(bData)) {
+      if (bookingsRes.ok && Array.isArray(bData)) {
         setBookings(bData);
       } else {
         setBookings([]);
+        if (bData.error) toast.error(`Bookings error: ${bData.error}`);
       }
       
-      if (Array.isArray(cData)) {
+      if (contactsRes.ok && Array.isArray(cData)) {
         setContacts(cData);
       } else {
         setContacts([]);
+        if (cData.error) toast.error(`Contacts error: ${cData.error}`);
       }
     } catch (err) {
       toast.error("Failed to fetch data.");
@@ -738,9 +740,14 @@ const AdminDashboard = () => {
   const deleteBooking = async (id: string) => {
     if (!confirm("Are you sure you want to delete this booking?")) return;
     try {
-      await fetch(`/api/booking/${id}`, { method: 'DELETE' });
-      setBookings(bookings.filter(b => b.id !== id));
-      toast.success("Booking deleted.");
+      const res = await fetch(`/api/booking/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBookings(bookings.filter(b => b.id !== id));
+        toast.success("Booking deleted.");
+      } else {
+        toast.error(data.error || "Failed to delete.");
+      }
     } catch (err) {
       toast.error("Failed to delete.");
     }
@@ -748,13 +755,18 @@ const AdminDashboard = () => {
 
   const markCompleted = async (id: string) => {
     try {
-      await fetch(`/api/booking/${id}`, {
+      const res = await fetch(`/api/booking/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'completed' })
       });
-      setBookings(bookings.map(b => b.id === id ? { ...b, status: 'completed' } : b));
-      toast.success("Marked as completed.");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBookings(bookings.map(b => b.id === id ? { ...b, status: 'completed' } : b));
+        toast.success("Marked as completed.");
+      } else {
+        toast.error(data.error || "Failed to update.");
+      }
     } catch (err) {
       toast.error("Failed to update.");
     }
