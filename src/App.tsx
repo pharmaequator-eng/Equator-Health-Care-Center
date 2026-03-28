@@ -22,7 +22,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
-import { supabase } from './lib/supabase';
+import { supabase, supabaseUrl } from './lib/supabase';
 
 // --- Context ---
 
@@ -313,6 +313,10 @@ const BookAppointment = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+      }
+
       const { data, error } = await supabase
         .from('bookings')
         .insert([{
@@ -339,7 +343,11 @@ const BookAppointment = () => {
       toast.success("Appointment booked successfully!");
       setBookingSuccess(data);
     } catch (err: any) {
-      toast.error(err.message || "An error occurred. Please try again.");
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please check your internet connection or verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error(err.message || "An error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -536,6 +544,10 @@ const Contact = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+      }
+
       const { error } = await supabase
         .from('contacts')
         .insert([{
@@ -558,7 +570,11 @@ const Contact = () => {
       toast.success("Message sent successfully! We will get back to you soon.");
       setFormData({ name: '', address: '', contact: '', email: '', age: '', subject: '', message: '' });
     } catch (err: any) {
-      toast.error(err.message || "An error occurred.");
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please check your internet connection or verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error(err.message || "An error occurred.");
+      }
     } finally {
       setLoading(false);
     }
@@ -764,6 +780,10 @@ const ContentEditor = () => {
   const handleSave = async (key: string, data: any) => {
     setSaving(true);
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+      }
+
       const { error } = await supabase
         .from('site_content')
         .upsert({ section_key: key, content: data, updated_at: new Date().toISOString() });
@@ -778,7 +798,11 @@ const ContentEditor = () => {
       toast.success(`${key} content updated successfully`);
       refreshContent();
     } catch (err: any) {
-      toast.error(err.message || `Failed to update ${key} content`);
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error(err.message || `Failed to update ${key} content`);
+      }
     } finally {
       setSaving(false);
     }
@@ -881,6 +905,13 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        toast.error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+        setBookings([]);
+        setContacts([]);
+        return;
+      }
+
       const [bookingsRes, contactsRes] = await Promise.all([
         supabase.from('bookings').select('*').order('booking_date', { ascending: false }),
         supabase.from('contacts').select('*').order('created_at', { ascending: false })
@@ -903,8 +934,12 @@ const AdminDashboard = () => {
       } else {
         setContacts(contactsRes.data || []);
       }
-    } catch (err) {
-      toast.error("Failed to fetch data.");
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error("Failed to fetch data.");
+      }
       setBookings([]);
       setContacts([]);
     }
@@ -913,6 +948,9 @@ const AdminDashboard = () => {
   const deleteBooking = async (id: string) => {
     if (!confirm("Are you sure you want to delete this booking?")) return;
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        throw new Error("Supabase is not configured.");
+      }
       const { error } = await supabase.from('bookings').delete().eq('id', id);
       if (!error) {
         setBookings(bookings.filter(b => b.id !== id));
@@ -920,13 +958,20 @@ const AdminDashboard = () => {
       } else {
         toast.error(error.message || "Failed to delete.");
       }
-    } catch (err) {
-      toast.error("Failed to delete.");
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error("Failed to delete.");
+      }
     }
   };
 
   const markCompleted = async (id: string) => {
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        throw new Error("Supabase is not configured.");
+      }
       const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
       if (!error) {
         setBookings(bookings.map(b => b.id === id ? { ...b, status: 'completed' } : b));
@@ -934,8 +979,12 @@ const AdminDashboard = () => {
       } else {
         toast.error(error.message || "Failed to update.");
       }
-    } catch (err) {
-      toast.error("Failed to update.");
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch') {
+        toast.error("Network error. Please verify your Supabase URL in Netlify environment variables.");
+      } else {
+        toast.error("Failed to update.");
+      }
     }
   };
 
@@ -1097,6 +1146,9 @@ export default function App() {
 
   const fetchContent = async () => {
     try {
+      if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+        return;
+      }
       const { data, error } = await supabase.from('site_content').select('*');
       if (!error && Array.isArray(data) && data.length > 0) {
         const newContent = { ...defaultContent };
@@ -1106,8 +1158,12 @@ export default function App() {
         });
         setContent(newContent);
       }
-    } catch (err) {
-      console.error("Failed to fetch content", err);
+    } catch (err: any) {
+      if (err.message === 'Failed to fetch') {
+        console.error("Network error. Please verify your Supabase URL in Netlify environment variables.");
+      } else {
+        console.error("Failed to fetch content", err);
+      }
     }
   };
 
