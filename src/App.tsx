@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
+import { supabase } from './lib/supabase';
 
 // --- Context ---
 
@@ -312,20 +313,33 @@ const BookAppointment = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('/api/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Appointment booked successfully!");
-        setBookingSuccess(data.booking);
-      } else {
-        toast.error(data.error || "Failed to book appointment.");
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([{
+          name: formData.name,
+          address: formData.address,
+          contact: formData.contact,
+          email: formData.email,
+          age: parseInt(formData.age, 10) || 0,
+          subject: formData.subject,
+          message: formData.message,
+          booking_date: new Date().toISOString(),
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+          throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+        }
+        throw error;
       }
-    } catch (err) {
-      toast.error("An error occurred. Please try again.");
+
+      toast.success("Appointment booked successfully!");
+      setBookingSuccess(data);
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -522,20 +536,29 @@ const Contact = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Message sent successfully! We will get back to you soon.");
-        setFormData({ name: '', address: '', contact: '', email: '', age: '', subject: '', message: '' });
-      } else {
-        toast.error("Failed to send message.");
+      const { error } = await supabase
+        .from('contacts')
+        .insert([{
+          name: formData.name,
+          address: formData.address,
+          contact: formData.contact,
+          email: formData.email,
+          age: parseInt(formData.age, 10) || 0,
+          subject: formData.subject,
+          message: formData.message
+        }]);
+
+      if (error) {
+        if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+          throw new Error("Database tables are missing. Please run the SQL script in your Supabase SQL Editor.");
+        }
+        throw error;
       }
-    } catch (err) {
-      toast.error("An error occurred.");
+
+      toast.success("Message sent successfully! We will get back to you soon.");
+      setFormData({ name: '', address: '', contact: '', email: '', age: '', subject: '', message: '' });
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred.");
     } finally {
       setLoading(false);
     }
@@ -675,14 +698,11 @@ const AdminLogin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('adminToken', data.token);
+      const validUsername = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
+      const validPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'password123';
+
+      if (username === validUsername && password === validPassword) {
+        localStorage.setItem('adminToken', 'mock-jwt-token');
         toast.success("Login successful!");
         navigate('/admin/dashboard');
       } else {
@@ -744,19 +764,21 @@ const ContentEditor = () => {
   const handleSave = async (key: string, data: any) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/content/${key}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: data })
-      });
-      if (res.ok) {
-        toast.success(`${key} content updated successfully`);
-        refreshContent();
-      } else {
-        throw new Error("Failed to update");
+      const { error } = await supabase
+        .from('site_content')
+        .upsert({ section_key: key, content: data, updated_at: new Date().toISOString() });
+
+      if (error) {
+        if (error.message?.includes("schema cache") || error.message?.includes("relation")) {
+          throw new Error("Please create the site_content table in Supabase first.");
+        }
+        throw error;
       }
-    } catch (err) {
-      toast.error(`Failed to update ${key} content`);
+
+      toast.success(`${key} content updated successfully`);
+      refreshContent();
+    } catch (err: any) {
+      toast.error(err.message || `Failed to update ${key} content`);
     } finally {
       setSaving(false);
     }
@@ -860,24 +882,26 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       const [bookingsRes, contactsRes] = await Promise.all([
-        fetch('/api/bookings'),
-        fetch('/api/contacts')
+        supabase.from('bookings').select('*').order('booking_date', { ascending: false }),
+        supabase.from('contacts').select('*').order('created_at', { ascending: false })
       ]);
-      const bData = await bookingsRes.json();
-      const cData = await contactsRes.json();
       
-      if (bookingsRes.ok && Array.isArray(bData)) {
-        setBookings(bData);
-      } else {
+      if (bookingsRes.error) {
         setBookings([]);
-        if (bData.error) toast.error(`Bookings error: ${bData.error}`);
+        if (!bookingsRes.error.message?.includes("relation")) {
+          toast.error(`Bookings error: ${bookingsRes.error.message}`);
+        }
+      } else {
+        setBookings(bookingsRes.data || []);
       }
       
-      if (contactsRes.ok && Array.isArray(cData)) {
-        setContacts(cData);
-      } else {
+      if (contactsRes.error) {
         setContacts([]);
-        if (cData.error) toast.error(`Contacts error: ${cData.error}`);
+        if (!contactsRes.error.message?.includes("relation")) {
+          toast.error(`Contacts error: ${contactsRes.error.message}`);
+        }
+      } else {
+        setContacts(contactsRes.data || []);
       }
     } catch (err) {
       toast.error("Failed to fetch data.");
@@ -889,13 +913,12 @@ const AdminDashboard = () => {
   const deleteBooking = async (id: string) => {
     if (!confirm("Are you sure you want to delete this booking?")) return;
     try {
-      const res = await fetch(`/api/booking/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const { error } = await supabase.from('bookings').delete().eq('id', id);
+      if (!error) {
         setBookings(bookings.filter(b => b.id !== id));
         toast.success("Booking deleted.");
       } else {
-        toast.error(data.error || "Failed to delete.");
+        toast.error(error.message || "Failed to delete.");
       }
     } catch (err) {
       toast.error("Failed to delete.");
@@ -904,17 +927,12 @@ const AdminDashboard = () => {
 
   const markCompleted = async (id: string) => {
     try {
-      const res = await fetch(`/api/booking/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const { error } = await supabase.from('bookings').update({ status: 'completed' }).eq('id', id);
+      if (!error) {
         setBookings(bookings.map(b => b.id === id ? { ...b, status: 'completed' } : b));
         toast.success("Marked as completed.");
       } else {
-        toast.error(data.error || "Failed to update.");
+        toast.error(error.message || "Failed to update.");
       }
     } catch (err) {
       toast.error("Failed to update.");
@@ -1079,17 +1097,14 @@ export default function App() {
 
   const fetchContent = async () => {
     try {
-      const res = await fetch('/api/content');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          const newContent = { ...defaultContent };
-          data.forEach((item: any) => {
-            if (item.section_key === 'hero') newContent.hero = item.content;
-            if (item.section_key === 'contact_info') newContent.contact_info = item.content;
-          });
-          setContent(newContent);
-        }
+      const { data, error } = await supabase.from('site_content').select('*');
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const newContent = { ...defaultContent };
+        data.forEach((item: any) => {
+          if (item.section_key === 'hero') newContent.hero = item.content;
+          if (item.section_key === 'contact_info') newContent.contact_info = item.content;
+        });
+        setContent(newContent);
       }
     } catch (err) {
       console.error("Failed to fetch content", err);
