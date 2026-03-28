@@ -174,6 +174,59 @@ app.get("/api/contacts", async (req, res) => {
   }
 });
 
+app.get("/api/content", async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from("site_content")
+      .select("*");
+    
+    if (error) {
+      console.error("Supabase fetch content error:", error);
+      // If table doesn't exist, just return empty array instead of crashing
+      if (error.message?.includes("relation") || error.message?.includes("schema cache")) {
+        return res.json([]);
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
+    res.json(data || []);
+  } catch (error: any) {
+    console.error("Content fetch catch error:", error.message || error);
+    const errorMsg = error?.message || String(error);
+    if (errorMsg.includes("schema cache") || errorMsg.includes("relation")) {
+      return res.json([]);
+    }
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
+  }
+});
+
+app.put("/api/content/:key", async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { content } = req.body;
+    const { data, error } = await supabase
+      .from("site_content")
+      .upsert({ section_key: req.params.key, content, updated_at: new Date().toISOString() })
+      .select();
+      
+    if (error) {
+      console.error("Supabase update content error:", error);
+      if (error.message?.includes("relation") || error.message?.includes("schema cache")) {
+        return res.status(400).json({ error: "Please create the site_content table in Supabase first." });
+      }
+      throw new Error(error.message || JSON.stringify(error));
+    }
+    res.json({ success: true, data });
+  } catch (error: any) {
+    console.error("Content update catch error:", error.message || error);
+    const errorMsg = error?.message || String(error);
+    if (errorMsg.includes("schema cache") || errorMsg.includes("relation")) {
+      return res.status(400).json({ error: "Please create the site_content table in Supabase first." });
+    }
+    res.status(500).json({ error: error.message || "An unexpected error occurred." });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

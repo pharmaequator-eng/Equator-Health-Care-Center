@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Heart, 
@@ -22,6 +22,33 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
+
+// --- Context ---
+
+const defaultContent = {
+  hero: {
+    title: "Mental Health Matters.",
+    subtitle: "We Are Here to Help.",
+    description: "Equator Health Care Pvt. Ltd. is a specialized pharmacy and lab dedicated to mental health. We provide professional support, diagnostics, and medication management to help you lead a fulfilling life."
+  },
+  contact_info: {
+    email: "pharmaequator@gmail.com",
+    phone: "+977-9840066925",
+    address: "Tinkune - 32, Kathmandu (Near CITe College)"
+  }
+};
+
+type ContentType = typeof defaultContent;
+
+const ContentContext = createContext<{
+  content: ContentType;
+  refreshContent: () => void;
+}>({
+  content: defaultContent,
+  refreshContent: () => {}
+});
+
+export const useContent = () => useContext(ContentContext);
 
 // --- Components ---
 
@@ -103,7 +130,9 @@ const Navbar = () => {
   );
 };
 
-const Footer = () => (
+const Footer = () => {
+  const { content } = useContent();
+  return (
   <footer className="bg-gray-900 text-white py-12">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -130,15 +159,15 @@ const Footer = () => (
           <ul className="space-y-4 text-sm text-gray-400">
             <li className="flex items-center space-x-3">
               <Mail className="w-4 h-4 text-teal-400" />
-              <span>support@equatorhealth.com</span>
+              <span>{content.contact_info.email}</span>
             </li>
             <li className="flex items-center space-x-3">
               <Phone className="w-4 h-4 text-teal-400" />
-              <span>+91 98765 43210</span>
+              <span>{content.contact_info.phone}</span>
             </li>
             <li className="flex items-center space-x-3">
               <MapPin className="w-4 h-4 text-teal-400" />
-              <span>123 Wellness St, Health City</span>
+              <span>{content.contact_info.address}</span>
             </li>
           </ul>
         </div>
@@ -148,11 +177,12 @@ const Footer = () => (
       </div>
     </div>
   </footer>
-);
+)};
 
 // --- Pages ---
 
 const Home = () => {
+  const { content } = useContent();
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -164,8 +194,8 @@ const Home = () => {
               animate={{ opacity: 1, y: 0 }}
               className="text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6"
             >
-              Mental Health Matters. <br />
-              <span className="text-teal-600">We Are Here to Help.</span>
+              {content.hero.title} <br />
+              <span className="text-teal-600">{content.hero.subtitle}</span>
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
@@ -173,9 +203,7 @@ const Home = () => {
               transition={{ delay: 0.1 }}
               className="text-lg text-gray-600 mb-10 leading-relaxed"
             >
-              Equator Health Care Pvt. Ltd. is a specialized pharmacy and lab dedicated 
-              to mental health. We provide professional support, diagnostics, and 
-              medication management to help you lead a fulfilling life.
+              {content.hero.description}
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -382,7 +410,7 @@ const BookAppointment = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="John Doe"
+              placeholder="Name"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
             />
           </div>
@@ -394,7 +422,7 @@ const BookAppointment = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="john@example.com"
+              placeholder="info@gmail.com"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
             />
           </div>
@@ -405,7 +433,7 @@ const BookAppointment = () => {
               name="contact"
               value={formData.contact}
               onChange={handleChange}
-              placeholder="+91 00000 00000"
+              placeholder="+977 00000 00000"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
             />
           </div>
@@ -417,7 +445,7 @@ const BookAppointment = () => {
               name="age"
               value={formData.age}
               onChange={handleChange}
-              placeholder="25"
+              placeholder="20"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
             />
           </div>
@@ -474,6 +502,7 @@ const BookAppointment = () => {
 };
 
 const Contact = () => {
+  const { content } = useContent();
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -527,7 +556,7 @@ const Contact = () => {
             </div>
             <div>
               <h4 className="font-bold text-gray-900">Call Us</h4>
-              <p className="text-gray-600 text-sm">+91 98765 43210</p>
+              <p className="text-gray-600 text-sm">{content.contact_info.phone}</p>
             </div>
           </div>
           <div className="flex items-start space-x-4">
@@ -536,7 +565,7 @@ const Contact = () => {
             </div>
             <div>
               <h4 className="font-bold text-gray-900">Email Us</h4>
-              <p className="text-gray-600 text-sm">support@equatorhealth.com</p>
+              <p className="text-gray-600 text-sm">{content.contact_info.email}</p>
             </div>
           </div>
           <div className="flex items-start space-x-4">
@@ -545,8 +574,21 @@ const Contact = () => {
             </div>
             <div>
               <h4 className="font-bold text-gray-900">Visit Us</h4>
-              <p className="text-gray-600 text-sm">123 Wellness St, Health City, India</p>
+              <p className="text-gray-600 text-sm">{content.contact_info.address}</p>
             </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl overflow-hidden h-64 shadow-sm border border-gray-100">
+            <iframe
+              title="Location Map"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(content.contact_info.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+            ></iframe>
           </div>
         </div>
 
@@ -693,10 +735,117 @@ const AdminLogin = () => {
   );
 };
 
+const ContentEditor = () => {
+  const { content, refreshContent } = useContent();
+  const [hero, setHero] = useState(content.hero);
+  const [contactInfo, setContactInfo] = useState(content.contact_info);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (key: string, data: any) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/content/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: data })
+      });
+      if (res.ok) {
+        toast.success(`${key} content updated successfully`);
+        refreshContent();
+      } else {
+        throw new Error("Failed to update");
+      }
+    } catch (err) {
+      toast.error(`Failed to update ${key} content`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-8">
+      <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Hero Section</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
+            <input 
+              value={hero.title}
+              onChange={e => setHero({...hero, title: e.target.value})}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Subtitle</label>
+            <input 
+              value={hero.subtitle}
+              onChange={e => setHero({...hero, subtitle: e.target.value})}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+            <textarea 
+              value={hero.description}
+              onChange={e => setHero({...hero, description: e.target.value})}
+              rows={3}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <button 
+            onClick={() => handleSave('hero', hero)}
+            disabled={saving}
+            className="px-6 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+          >
+            Save Hero Content
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Contact Information</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+            <input 
+              value={contactInfo.email}
+              onChange={e => setContactInfo({...contactInfo, email: e.target.value})}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
+            <input 
+              value={contactInfo.phone}
+              onChange={e => setContactInfo({...contactInfo, phone: e.target.value})}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
+            <input 
+              value={contactInfo.address}
+              onChange={e => setContactInfo({...contactInfo, address: e.target.value})}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <button 
+            onClick={() => handleSave('contact_info', contactInfo)}
+            disabled={saving}
+            className="px-6 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+          >
+            Save Contact Info
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'bookings' | 'contacts'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'contacts' | 'content'>('bookings');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -810,10 +959,20 @@ const AdminDashboard = () => {
         >
           Inquiries ({contacts.length})
         </button>
+        <button 
+          onClick={() => setActiveTab('content')}
+          className={`px-6 py-2 rounded-full font-bold transition-all ${
+            activeTab === 'content' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          Site Content
+        </button>
       </div>
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        {activeTab === 'bookings' ? (
+        {activeTab === 'content' ? (
+          <ContentEditor />
+        ) : activeTab === 'bookings' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gray-50 border-b border-gray-100">
@@ -916,19 +1075,46 @@ const AdminDashboard = () => {
 // --- Main App ---
 
 export default function App() {
+  const [content, setContent] = useState<ContentType>(defaultContent);
+
+  const fetchContent = async () => {
+    try {
+      const res = await fetch('/api/content');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const newContent = { ...defaultContent };
+          data.forEach((item: any) => {
+            if (item.section_key === 'hero') newContent.hero = item.content;
+            if (item.section_key === 'contact_info') newContent.contact_info = item.content;
+          });
+          setContent(newContent);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch content", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
-      <Navbar />
-      <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/book" element={<BookAppointment />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/equatoradmin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <ContentContext.Provider value={{ content, refreshContent: fetchContent }}>
+      <div className="min-h-screen bg-white flex flex-col font-sans text-gray-900">
+        <Navbar />
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/book" element={<BookAppointment />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/equatoradmin" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </ContentContext.Provider>
   );
 }

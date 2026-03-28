@@ -27,5 +27,19 @@ CREATE TABLE IF NOT EXISTS contacts (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 3. Site Content Table (For CMS)
+CREATE TABLE IF NOT EXISTS site_content (
+  section_key TEXT PRIMARY KEY,
+  content JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert default content if it doesn't exist
+INSERT INTO site_content (section_key, content)
+VALUES 
+  ('hero', '{"title": "Mental Health Matters.", "subtitle": "We Are Here to Help.", "description": "Equator Health Care Pvt. Ltd. is a specialized pharmacy and lab dedicated to mental health. We provide professional support, diagnostics, and medication management to help you lead a fulfilling life."}'::jsonb),
+  ('contact_info', '{"email": "pharmaequator@gmail.com", "phone": "+977-9840066925", "address": "Tinkune - 32, Kathmandu (Near CITe College)"}'::jsonb)
+ON CONFLICT (section_key) DO NOTHING;
+
 -- Note: Admin login is handled via environment variables for simplicity in this crude dashboard.
 -- If you want a database-backed admin, create an 'admins' table.
