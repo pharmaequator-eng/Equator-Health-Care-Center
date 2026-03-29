@@ -777,6 +777,11 @@ const ContentEditor = () => {
   const [contactInfo, setContactInfo] = useState(content.contact_info);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setHero(content.hero);
+    setContactInfo(content.contact_info);
+  }, [content]);
+
   const handleSave = async (key: string, data: any) => {
     setSaving(true);
     try {
@@ -1046,7 +1051,9 @@ const AdminDashboard = () => {
                 <tr>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Patient</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Contact</th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700">Address</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Reason</th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700">Message</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Date</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Status</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Actions</th>
@@ -1060,10 +1067,16 @@ const AdminDashboard = () => {
                       <div className="text-xs text-gray-500">Age: {booking.age}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{booking.email}</div>
+                      <div className="text-sm text-gray-900 font-medium">{booking.email}</div>
                       <div className="text-xs text-gray-500">{booking.contact}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{booking.subject}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[200px] truncate" title={booking.address}>
+                      {booking.address}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-700">{booking.subject}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[200px] truncate" title={booking.message}>
+                      {booking.message || "-"}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {new Date(booking.booking_date).toLocaleDateString()}
                     </td>
@@ -1098,7 +1111,7 @@ const AdminDashboard = () => {
                 ))}
                 {bookings.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No bookings found.</td>
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">No bookings found.</td>
                   </tr>
                 )}
               </tbody>
@@ -1110,8 +1123,10 @@ const AdminDashboard = () => {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">From</th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700">Contact</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Subject</th>
                   <th className="px-6 py-4 text-sm font-bold text-gray-700">Message</th>
+                  <th className="px-6 py-4 text-sm font-bold text-gray-700">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1121,13 +1136,22 @@ const AdminDashboard = () => {
                       <div className="font-bold text-gray-900">{contact.name}</div>
                       <div className="text-xs text-gray-500">{contact.email}</div>
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-700 font-medium">{contact.contact}</div>
+                      <div className="text-xs text-gray-500">{contact.address}</div>
+                    </td>
                     <td className="px-6 py-4 text-sm font-bold text-gray-700">{contact.subject}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">{contact.message}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate" title={contact.message}>
+                      {contact.message}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {new Date(contact.created_at).toLocaleDateString()}
+                    </td>
                   </tr>
                 ))}
                 {contacts.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-gray-500">No inquiries found.</td>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">No inquiries found.</td>
                   </tr>
                 )}
               </tbody>
